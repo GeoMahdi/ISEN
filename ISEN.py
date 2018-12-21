@@ -19,40 +19,45 @@ for user1 in userNodes:
             createQNearGraphCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
                                           'Where person1.name = "{}" AND person2.name = "{}" ' \
                                           'MERGE (person1)-[r:QNEAR]->(person2)' \
-                                          'SET r.qnearness={}, r.maxqnearness={}'.format(dict(user1)["name"], dict(user2)["name"], qnearness, maxqnearness)
+                                          'SET r.qnear={}, r.maxqnear={}'.format(dict(user1)["name"], dict(user2)["name"], qnearness, maxqnearness)
             print(createQNearGraphCypherQuery)
+            graph.run(createQNearGraphCypherQuery)
 
-qmax = maxqnearness
-for user_1 in userNodes:
-    for user_2 in userNodes:
+userNodes_ = selector.select("Person")
+for user_1 in userNodes_:
+    for user_2 in userNodes_:
         if user_1 != user_2:
+            print(dict(user_1)["name"], dict(user_2)["name"])
+            qmax = maxqnearness
             while qmax > -1:
-                qConnectCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
-                                          'Where person1.name = "{}" AND person2.name = "{}" ' \
-                                      'path = ShortestPath((person1)-[*]-(person2))' \
-                                      ' WHERE ALL (r in relationships(p) WHERE type(r)="QNEAR" AND r.qnearness >= {}) ' \
+                print('qmax = {}'.format(qmax))
+                qConnectCypherQuery = 'MATCH (person1:Person), (person2:Person)' \
+                                      'Where person1.name = "{}" AND person2.name = "{}"' \
+                                      'MATCH path = ShortestPath((person1)-[*]-(person2))' \
+                                      'WHERE ALL (r in relationships(path) WHERE type(r)="QNEAR" AND r.qnear >= {}) ' \
                                       'return path'.format(dict(user_1)["name"], dict(user_2)["name"], qmax)
                 print(qConnectCypherQuery)
                 res = graph.evaluate(qConnectCypherQuery)
                 if res != None:
                     connectiveLength = res.__len__()
                     rels = res.relationships()
-                    qconnectvalue = rels[0].get('qnearness')
+                    qconnectvalue = rels[0].get('qnear')
                     for rel in rels:
-                        if rel.get('qnearness') < qconnectvalue:
-                            qconnectvalue = rel.get('qnearness')
+                        if rel.get('qnear') < qconnectvalue:
+                            qconnectvalue = rel.get('qnear')
 
-                    createQConnectGraphCypherQuery = 'MATCH (person1:Person), (place2:Person2) ' \
-                                                      'Where person1.name = "{}" AND person2.name = "{}" ' \
-                                                      'MERGE (person1)-[s:QCONNECT]->(person2) ' \
-                                                      'SET s.qconnect={} SET s.length = {}'.format(dict(user_1)["name"], dict(user_2)["name"], qconnectvalue, connectiveLength)
+                    createQConnectGraphCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
+                                                     'Where person1.name = "{}" AND person2.name = "{}" ' \
+                                                     'MERGE (person1)-[s:QCONNECT]->(person2) ' \
+                                                     'SET s.qconnect={} SET s.length = {}'.format(dict(user_1)["name"], dict(user_2)["name"], qconnectvalue, connectiveLength)
 
                     print(createQConnectGraphCypherQuery)
+                    print('res = {}'.format(res))
                     graph.run(createQConnectGraphCypherQuery)
                     break
                 else:
                     qmax = qmax-1
-
+                    print(qmax)
 
 #
 #
