@@ -1,13 +1,23 @@
-from py2neo import Graph, NodeSelector
-graph = Graph(user='neo4j', password='12345')
-selector = NodeSelector(graph)
-userNodes = selector.select("Person")
+# importing required py2neo objects
+from py2neo import Graph, NodeMatcher
+graph = Graph(user='neo4j', password='12345',port = 11006, scheme='bolt', host='localhost')
+# defining the node matcher object
+matcher = NodeMatcher(graph)
+# getting user nodes using node matcher
+userNodes = matcher.match("Person")
 deleteQNEARPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:QNEAR]-(p2:Person)' \
                               'DELETE s'
 deleteQCONNECTPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:QCONNECT]-(p2:Person)' \
                               'DELETE s'
+deleteQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:Q]-(p2:Person)' \
+                              'DELETE s'
+deleteUUQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:UUQ]-(p2:Person)' \
+                              'DELETE s'
 graph.run(deleteQNEARPersonEdgesCypherQuery)
 graph.run(deleteQCONNECTPersonEdgesCypherQuery)
+graph.run(deleteQPersonEdgesCypherQuery)
+graph.run(deleteUUQPersonEdgesCypherQuery)
+
 for user in userNodes:
     dimensionQuery1 = 'MATCH (p1:Person)-[r:CHECK_IN]-(place:Place)' \
                        'WHERE p1.name = "{}"' \
@@ -16,7 +26,7 @@ for user in userNodes:
     dimension = graph.evaluate(dimensionQuery1)
     dimensionQuery2='MATCH (p1:Person)' \
                      'WHERE p1.name = "{}"' \
-                     'SET p1.dimension = {}'.format(dict(user)["name"],dimension)
+                     'SET p1.uudim = {}'.format(dict(user)["name"],dimension)
     graph.run(dimensionQuery2)
 maxqnearness = -1
 for user1 in userNodes:
@@ -31,19 +41,19 @@ for user1 in userNodes:
             print(qnearness)
             createQNearGraphCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
                                           'Where person1.name = "{}" AND person2.name = "{}" ' \
-                                          'MERGE (person1)-[r:QNEAR]->(person2)' \
+                                          'MERGE (person1)-[r:UUQ]->(person2)' \
                                           'SET r.qnear={}, r.maxqnear={}'.format(dict(user1)["name"], dict(user2)["name"], qnearness, maxqnearness)
             print(createQNearGraphCypherQuery)
             graph.run(createQNearGraphCypherQuery)
-userNodes_ = selector.select("Person")
+userNodes_ = matcher.match("Person")
 for user_1 in userNodes_:
     user_1_dimension = graph.evaluate('MATCH (p:Person)'
                                       'WHERE p.name = "{}"'
-                                      'return p.dimension'.format(dict(user_1)["name"]))
+                                      'return p.uudim'.format(dict(user_1)["name"]))
     for user_2 in userNodes_:
         user_2_dimension = graph.evaluate('MATCH (p:Person)'
                                           'WHERE p.name = "{}"'
-                                          'return p.dimension'.format(dict(user_2)["name"]))
+                                          'return p.uudim'.format(dict(user_2)["name"]))
         if user_1 != user_2:
             print(dict(user_1)["name"], dict(user_2)["name"])
             qmax = maxqnearness
@@ -52,13 +62,13 @@ for user_1 in userNodes_:
                 qConnectCypherQuery = 'MATCH (person1:Person), (person2:Person)' \
                                       'Where person1.name = "{}" AND person2.name = "{}"' \
                                       'MATCH path = ShortestPath((person1)-[*]-(person2))' \
-                                      'WHERE ALL (r in relationships(path) WHERE type(r)="QNEAR" AND r.qnear >= {}) ' \
+                                      'WHERE ALL (r in relationships(path) WHERE type(r)="UUQ" AND r.qnear >= {}) ' \
                                       'return path'.format(dict(user_1)["name"], dict(user_2)["name"], qmax)
                 print(qConnectCypherQuery)
                 res = graph.evaluate(qConnectCypherQuery)
                 if res != None:
                     connectiveLength = res.__len__()
-                    rels = res.relationships()
+                    rels = res.relationships
                     qconnectvalue = rels[0].get('qnear')
                     for rel in rels:
                         if rel.get('qnear') < qconnectvalue:
@@ -66,7 +76,7 @@ for user_1 in userNodes_:
                     similarity = (qconnectvalue+1)/(user_1_dimension+user_2_dimension)
                     createQConnectGraphCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
                                                      'Where person1.name = "{}" AND person2.name = "{}" ' \
-                                                     'MERGE (person1)-[s:QCONNECT]->(person2) ' \
+                                                     'MERGE (person1)-[s:UUQ]->(person2) ' \
                                                      'SET s.qconnect={} ' \
                                                      'SET s.length = {} ' \
                                                      'SET s.similarity={} '.format(dict(user_1)["name"], dict(user_2)["name"], qconnectvalue, connectiveLength, similarity)
@@ -78,69 +88,3 @@ for user_1 in userNodes_:
                 else:
                     qmax = qmax-1
                     print(qmax)
-#
-# #
-# #
-#
-# #
-# #
-# # deleteQNEARPlaceEdgesCypherQuery = 'MATCH (pl1:Place)-[t:QNEAR]-(pl2:Place)' \
-# #                               'DELETE t'
-# # graph.run(deleteQNEARPlaceEdgesCypherQuery)
-# # maxqnearness_ = -1
-# # placeNodes = selector.select("Place")
-# #
-# # for place1 in placeNodes:
-# #     for place2 in placeNodes:
-# #         if place1 != place2:
-# #             qNearnessCypherQuery_ = 'MATCH (place1:Place)-[r:CHECK_IN]-(person:Person)-[s:CHECK_IN]-(place2:Place) ' \
-# #                                     'Where place1.name = "{}" AND place2.name = "{}" ' \
-# #                                     'return COUNT (DISTINCT person)'.format(dict(place1)["name"], dict(place2)["name"])
-# #             qnearness_ = graph.run(qNearnessCypherQuery_).data()[0]['COUNT (DISTINCT person)']-1
-# #             if qnearness_ > maxqnearness_:
-# #                 maxqnearness_ = qnearness_
-# #             print(qnearness_)
-# #             createQNearGraphCypherQuery_ = 'MATCH (place1:Place), (place2:Place) ' \
-# #                                            'Where place1.name = "{}" AND place2.name = "{}" ' \
-# #                                            'MERGE (place1)-[r:QNEAR]->(place2) SET r.qnearness={}, r.maxqnearness={}'.format(dict(place1)["name"], dict(place2)["name"], qnearness_, maxqnearness_)
-# #             print(createQNearGraphCypherQuery_)
-# #             graph.run(createQNearGraphCypherQuery_)
-#
-#             # if qnearness_ > -1:
-#             #     createQConnectGraphCypherQuery_ = 'MATCH (place1:Place), (place2:Place) ' \
-#             #                                       'Where place1.name = "{}" AND place2.name = "{}" ' \
-#             #                                       'MERGE (place1)-[s:QCONNECT]->(place2) SET s.qconnectedness={} SET s.length = 1'.format(dict(place1)["name"], dict(place2)["name"], qnearness_)
-#             #     print(createQConnectGraphCypherQuery_)
-#             #     graph.run(createQConnectGraphCypherQuery_)
-#
-#
-#
-#
-#
-#
-#
-#
-# #Test
-# # print(userNodes)
-# # print(len((list(userNodes))))
-# # text= 'Match (person1:Person)-[r:CHECK_IN]-(place:Place)-[s:CHECK_IN]-(person2:Person) Where person1.name = "Ben" AND person2.name = "Iman" return COUNT (DISTINCT place)'
-# # print(type(graph.run(text).data()))
-# # data=graph.run(text).data()
-# # print(type((data[0])))
-# # print((data[0])['COUNT (DISTINCT place)'])
-#             # print(placeNodes)
-#             # print(len((list(placeNodes))))
-#             # text= 'MATCH (place1:Place)-[r:CHECK_IN]-(person:Person)-[s:CHECK_IN]-(place2:Place) Where place1.name = "SALLE TP CHIMIE" AND place2.name = "SALLE TP 230" return COUNT (DISTINCT person)'
-#             # data=graph.run(text).data()
-#             # print(type((data[0])))
-#             # print((data[0])['COUNT (DISTINCT person)'])
-#
-# # text = "Match (person1:Person)-[r:CHECK_IN]-(place:Place)-[s:CHECK_IN]-(person2:Person) Where person1.name = \"Thierry\" AND person2.name = \"Mahdi\" return COUNT (DISTINCT place)"
-# # result = graph.run(text).data()
-# # print(type(result))
-# # print(type(result[0]))
-# # print(result[0]["COUNT (DISTINCT place)"])
-# # user1="Mahdi"
-# # user2="Rahimi"
-# # text = "Match (person1:Person)-[r:CHECK_IN]-(place:Place)-[s:CHECK_IN]-(person2:Person) Where person1.name = {} AND person2.name = {} return COUNT (DISTINCT place)".format(user1,user2)
-# # print(text)
