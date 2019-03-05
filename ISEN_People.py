@@ -13,11 +13,17 @@ deleteQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:Q]-(p2:Person)' \
                               'DELETE s'
 deleteUUQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:UUQ]-(p2:Person)' \
                               'DELETE s'
+deleteUPUQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:UPUQ]-(p2:Person)' \
+                              'DELETE s'
 graph.run(deleteQNEARPersonEdgesCypherQuery)
 graph.run(deleteQCONNECTPersonEdgesCypherQuery)
 graph.run(deleteQPersonEdgesCypherQuery)
 graph.run(deleteUUQPersonEdgesCypherQuery)
-
+graph.run(deleteUPUQPersonEdgesCypherQuery)
+for user in userNodes:
+    dimensionQuery0 = 'MATCH (p1:Person)' \
+                      'SET p1.upudim = 0'
+    graph.run(dimensionQuery0)
 for user in userNodes:
     dimensionQuery1 = 'MATCH (p1:Person)-[r:CHECK_IN]-(place:Place)' \
                        'WHERE p1.name = "{}"' \
@@ -26,7 +32,7 @@ for user in userNodes:
     dimension = graph.evaluate(dimensionQuery1)
     dimensionQuery2='MATCH (p1:Person)' \
                      'WHERE p1.name = "{}"' \
-                     'SET p1.uudim = {}'.format(dict(user)["name"],dimension)
+                     'SET p1.upudim = {}'.format(dict(user)["name"],dimension)
     graph.run(dimensionQuery2)
 maxqnearness = -1
 for user1 in userNodes:
@@ -41,7 +47,7 @@ for user1 in userNodes:
             print(qnearness)
             createQNearGraphCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
                                           'Where person1.name = "{}" AND person2.name = "{}" ' \
-                                          'MERGE (person1)-[r:UUQ]->(person2)' \
+                                          'MERGE (person1)-[r:UPUQ]->(person2)' \
                                           'SET r.qnear={}, r.maxqnear={}'.format(dict(user1)["name"], dict(user2)["name"], qnearness, maxqnearness)
             print(createQNearGraphCypherQuery)
             graph.run(createQNearGraphCypherQuery)
@@ -49,11 +55,11 @@ userNodes_ = matcher.match("Person")
 for user_1 in userNodes_:
     user_1_dimension = graph.evaluate('MATCH (p:Person)'
                                       'WHERE p.name = "{}"'
-                                      'return p.uudim'.format(dict(user_1)["name"]))
+                                      'return p.upudim'.format(dict(user_1)["name"]))
     for user_2 in userNodes_:
         user_2_dimension = graph.evaluate('MATCH (p:Person)'
                                           'WHERE p.name = "{}"'
-                                          'return p.uudim'.format(dict(user_2)["name"]))
+                                          'return p.upudim'.format(dict(user_2)["name"]))
         if user_1 != user_2:
             print(dict(user_1)["name"], dict(user_2)["name"])
             qmax = maxqnearness
@@ -62,7 +68,7 @@ for user_1 in userNodes_:
                 qConnectCypherQuery = 'MATCH (person1:Person), (person2:Person)' \
                                       'Where person1.name = "{}" AND person2.name = "{}"' \
                                       'MATCH path = ShortestPath((person1)-[*]-(person2))' \
-                                      'WHERE ALL (r in relationships(path) WHERE type(r)="UUQ" AND r.qnear >= {}) ' \
+                                      'WHERE ALL (r in relationships(path) WHERE type(r)="UPUQ" AND r.qnear >= {}) ' \
                                       'return path'.format(dict(user_1)["name"], dict(user_2)["name"], qmax)
                 print(qConnectCypherQuery)
                 res = graph.evaluate(qConnectCypherQuery)
@@ -73,10 +79,13 @@ for user_1 in userNodes_:
                     for rel in rels:
                         if rel.get('qnear') < qconnectvalue:
                             qconnectvalue = rel.get('qnear')
-                    similarity = (qconnectvalue+1)/(user_1_dimension+user_2_dimension)
+                    if(user_1_dimension == 0 and user_2_dimension == 0):
+                        similarity = 0
+                    else:
+                        similarity = (qconnectvalue+1)/(user_1_dimension+user_2_dimension)
                     createQConnectGraphCypherQuery = 'MATCH (person1:Person), (person2:Person) ' \
                                                      'Where person1.name = "{}" AND person2.name = "{}" ' \
-                                                     'MERGE (person1)-[s:UUQ]->(person2) ' \
+                                                     'MERGE (person1)-[s:UPUQ]->(person2) ' \
                                                      'SET s.qconnect={} ' \
                                                      'SET s.length = {} ' \
                                                      'SET s.similarity={} '.format(dict(user_1)["name"], dict(user_2)["name"], qconnectvalue, connectiveLength, similarity)

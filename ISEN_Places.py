@@ -5,23 +5,28 @@ graph = Graph(user='neo4j', password='12345',port = 11006, scheme='bolt', host='
 matcher = NodeMatcher(graph)
 # getting user nodes using node matcher
 placeNodes = matcher.match("Place")
-deleteQNEARPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:QNEAR]-(p2:Person)' \
+deleteQNEARPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:QNEAR]-(p2:Place)' \
                               'DELETE s'
-deleteQCONNECTPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:QCONNECT]-(p2:Person)' \
+deleteQCONNECTPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:QCONNECT]-(p2:Place)' \
                               'DELETE s'
-deleteQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:Q]-(p2:Person)' \
+deleteQPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:Q]-(p2:Place)' \
                               'DELETE s'
-deletePPQPersonEdgesCypherQuery = 'MATCH (p1:Person)-[s:PPQ]-(p2:Person)' \
+deletePUPQPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:PUPQ]-(p2:Place)' \
                               'DELETE s'
-graph.run(deleteQNEARPersonEdgesCypherQuery)
-graph.run(deleteQCONNECTPersonEdgesCypherQuery)
-graph.run(deleteQPersonEdgesCypherQuery)
-graph.run(deletePPQPersonEdgesCypherQuery)
+deletePPQPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:PPQ]-(p2:Place)' \
+                              'DELETE s'
+graph.run(deleteQNEARPlaceEdgesCypherQuery)
+graph.run(deleteQCONNECTPlaceEdgesCypherQuery)
+graph.run(deleteQPlaceEdgesCypherQuery)
+graph.run(deletePUPQPlaceEdgesCypherQuery)
+graph.run(deletePPQPlaceEdgesCypherQuery)
 
 for place in placeNodes:
     dimensionQuery0 = 'MATCH (p1:Place)' \
-                      'SET p1.ppdim = 0'
+                      'SET p1.pupdim = 0'
     graph.run(dimensionQuery0)
+
+for place in placeNodes:
 
     dimensionQuery1 = 'MATCH (p1:Place)-[r:CHECK_IN]-(person:Person)' \
                        'WHERE p1.name = "{}"' \
@@ -30,7 +35,7 @@ for place in placeNodes:
     dimension = graph.evaluate(dimensionQuery1)
     dimensionQuery2='MATCH (p1:Place)' \
                      'WHERE p1.name = "{}"' \
-                     'SET p1.ppdim = {}'.format(dict(place)["name"],dimension)
+                     'SET p1.pupdim = {}'.format(dict(place)["name"],dimension)
     graph.run(dimensionQuery2)
 maxqnearness = -1
 for place1 in placeNodes:
@@ -45,7 +50,7 @@ for place1 in placeNodes:
             print(qnearness)
             createQNearGraphCypherQuery = 'MATCH (place1:Place), (place2:Place) ' \
                                           'Where place1.name = "{}" AND place2.name = "{}" ' \
-                                          'MERGE (place1)-[r:PPQ]->(place2)' \
+                                          'MERGE (place1)-[r:PUPQ]->(place2)' \
                                           'SET r.qnear={}, r.maxqnear={}'.format(dict(place1)["name"], dict(place2)["name"], qnearness, maxqnearness)
             print(createQNearGraphCypherQuery)
             graph.run(createQNearGraphCypherQuery)
@@ -53,11 +58,11 @@ placeNodes_ = matcher.match("Place")
 for place_1 in placeNodes_:
     place_1_dimension = graph.evaluate('MATCH (p:Place)'
                                       'WHERE p.name = "{}"'
-                                      'return p.ppdim'.format(dict(place_1)["name"]))
+                                      'return p.pupdim'.format(dict(place_1)["name"]))
     for place_2 in placeNodes_:
         place_2_dimension = graph.evaluate('MATCH (p:Place)'
                                           'WHERE p.name = "{}"'
-                                          'return p.ppdim'.format(dict(place_2)["name"]))
+                                          'return p.pupdim'.format(dict(place_2)["name"]))
         if place_1 != place_2:
             print(dict(place_1)["name"], dict(place_2)["name"])
             qmax = maxqnearness
@@ -66,7 +71,7 @@ for place_1 in placeNodes_:
                 qConnectCypherQuery = 'MATCH (place1:Place), (place2:Place)' \
                                       'Where place1.name = "{}" AND place2.name = "{}"' \
                                       'MATCH path = ShortestPath((place1)-[*]-(place2))' \
-                                      'WHERE ALL (r in relationships(path) WHERE type(r)="PPQ" AND r.qnear >= {}) ' \
+                                      'WHERE ALL (r in relationships(path) WHERE type(r)="PUPQ" AND r.qnear >= {}) ' \
                                       'return path'.format(dict(place_1)["name"], dict(place_2)["name"], qmax)
                 print(qConnectCypherQuery)
                 res = graph.evaluate(qConnectCypherQuery)
@@ -83,7 +88,7 @@ for place_1 in placeNodes_:
                         similarity = (qconnectvalue+1)/(place_1_dimension+place_2_dimension)
                     createQConnectGraphCypherQuery = 'MATCH (place1:Place), (place2:Place) ' \
                                                      'Where place1.name = "{}" AND place2.name = "{}" ' \
-                                                     'MERGE (place1)-[s:PPQ]->(place2) ' \
+                                                     'MERGE (place1)-[s:PUPQ]->(place2) ' \
                                                      'SET s.qconnect={} ' \
                                                      'SET s.length = {} ' \
                                                      'SET s.similarity={} '.format(dict(place_1)["name"], dict(place_2)["name"], qconnectvalue, connectiveLength, similarity)
