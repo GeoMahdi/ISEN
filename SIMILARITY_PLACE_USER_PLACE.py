@@ -15,11 +15,14 @@ deletePUPQPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:PUPQ]-(p2:Place)' \
                               'DELETE s'
 deletePPQPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:PPQ]-(p2:Place)' \
                               'DELETE s'
+deletePUPlaceEdgesCypherQuery = 'MATCH (p1:Place)-[s:PUP]-(p2:Place)' \
+                              'DELETE s'
 graph.run(deleteQNEARPlaceEdgesCypherQuery)
 graph.run(deleteQCONNECTPlaceEdgesCypherQuery)
 graph.run(deleteQPlaceEdgesCypherQuery)
 graph.run(deletePUPQPlaceEdgesCypherQuery)
 graph.run(deletePPQPlaceEdgesCypherQuery)
+graph.run(deletePUPlaceEdgesCypherQuery)
 
 for place in placeNodes:
     dimensionQuery0 = 'MATCH (p1:Place)' \
