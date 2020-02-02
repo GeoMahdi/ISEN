@@ -6,6 +6,7 @@ matcher = NodeMatcher(graph)
 # getting user nodes using node matcher
 placeNodes = matcher.match("Place")
 userNodes = matcher.match("Person")
+# test
 deleteUUPQ = 'MATCH (p1)-[s:UUPQ]-(p2) ' \
              'DELETE s'
 deleteUUP = 'MATCH (p1:Person)-[s:UUP]-(p2:Place) ' \
