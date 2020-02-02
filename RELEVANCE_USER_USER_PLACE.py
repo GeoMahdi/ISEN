@@ -6,10 +6,11 @@ matcher = NodeMatcher(graph)
 # getting user nodes using node matcher
 placeNodes = matcher.match("Place")
 userNodes = matcher.match("Person")
-deleteUUPQ = 'MATCH (p1:Person)-[s:UUPQ]-(p2:Place) ' \
+deleteUUPQ = 'MATCH (p1)-[s:UUPQ]-(p2) ' \
              'DELETE s'
 deleteUUP = 'MATCH (p1:Person)-[s:UUP]-(p2:Place) ' \
              'DELETE s'
+graph.run(deleteUUPQ)
 graph.run(deleteUUP)
 for user in userNodes:
     dimensionQuery0 = 'MATCH (p1:Person)' \
