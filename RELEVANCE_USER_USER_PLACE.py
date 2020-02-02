@@ -8,7 +8,9 @@ placeNodes = matcher.match("Place")
 userNodes = matcher.match("Person")
 deleteUUPQ = 'MATCH (p1:Person)-[s:UUPQ]-(p2:Place) ' \
              'DELETE s'
-graph.run(deleteUUPQ)
+deleteUUP = 'MATCH (p1:Person)-[s:UUP]-(p2:Place) ' \
+             'DELETE s'
+graph.run(deleteUUP)
 for user in userNodes:
     dimensionQuery0 = 'MATCH (p1:Person)' \
                       'SET p1.uupdim = 0'
@@ -53,7 +55,7 @@ for user in userNodes:
             print(qnearness)
             createQNearGraphCypherQuery = 'MATCH (person1:Person), (place:Place) ' \
                                           'Where person1.name = "{}" AND place.name = "{}" ' \
-                                          'MERGE (person1)-[r:UUPQ]->(place)' \
+                                          'MERGE (person1)-[r:UUP]->(place)' \
                                           'SET r.qnear={}, r.maxqnear={}'.format(dict(user)["name"], dict(place)["name"], qnearness, maxqnearness)
             print(createQNearGraphCypherQuery)
             graph.run(createQNearGraphCypherQuery)
@@ -73,7 +75,7 @@ for user in userNodes:
              qConnectCypherQuery = 'MATCH (person1:Person), (place:Place)' \
                                    'Where person1.name = "{}" AND place.name = "{}"' \
                                    'MATCH path = ShortestPath((person1)-[*]-(place))' \
-                                   'WHERE ALL (r in relationships(path) WHERE type(r)="UUPQ" AND r.qnear >= {}) ' \
+                                   'WHERE ALL (r in relationships(path) WHERE type(r)="UUP" AND r.qnear >= {}) ' \
                                    'return path'.format(dict(user)["name"], dict(place)["name"], qmax)
              print(qConnectCypherQuery)
              res = graph.evaluate(qConnectCypherQuery)
@@ -90,10 +92,10 @@ for user in userNodes:
                      similarity = (qconnectvalue + 1) / (user_dimension + place_dimension)
                      createQConnectGraphCypherQuery = 'MATCH (person1:Person), (place:Place) ' \
                                                       'Where person1.name = "{}" AND place.name = "{}" ' \
-                                                      'MERGE (person1)-[s:UUPQ]->(place) ' \
+                                                      'MERGE (person1)-[s:UUP]->(place) ' \
                                                       'SET s.qconnect={} ' \
                                                       'SET s.length = {} ' \
-                                                      'SET s.similarity={} '.format(dict(user)["name"],
+                                                      'SET s.relevance={} '.format(dict(user)["name"],
                                                                                     dict(place)["name"], qconnectvalue,
                                                                                     connectiveLength, similarity)
 

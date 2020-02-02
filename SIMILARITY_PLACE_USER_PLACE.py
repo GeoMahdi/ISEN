@@ -53,10 +53,11 @@ for place1 in placeNodes:
             print(qnearness)
             createQNearGraphCypherQuery = 'MATCH (place1:Place), (place2:Place) ' \
                                           'Where place1.name = "{}" AND place2.name = "{}" ' \
-                                          'MERGE (place1)-[r:PUPQ]->(place2)' \
+                                          'MERGE (place1)-[r:PUP]->(place2)' \
                                           'SET r.qnear={}, r.maxqnear={}'.format(dict(place1)["name"], dict(place2)["name"], qnearness, maxqnearness)
             print(createQNearGraphCypherQuery)
             graph.run(createQNearGraphCypherQuery)
+
 placeNodes_ = matcher.match("Place")
 for place_1 in placeNodes_:
     place_1_dimension = graph.evaluate('MATCH (p:Place)'
@@ -74,7 +75,7 @@ for place_1 in placeNodes_:
                 qConnectCypherQuery = 'MATCH (place1:Place), (place2:Place)' \
                                       'Where place1.name = "{}" AND place2.name = "{}"' \
                                       'MATCH path = ShortestPath((place1)-[*]-(place2))' \
-                                      'WHERE ALL (r in relationships(path) WHERE type(r)="PUPQ" AND r.qnear >= {}) ' \
+                                      'WHERE ALL (r in relationships(path) WHERE type(r)="PUP" AND r.qnear >= {}) ' \
                                       'return path'.format(dict(place_1)["name"], dict(place_2)["name"], qmax)
                 print(qConnectCypherQuery)
                 res = graph.evaluate(qConnectCypherQuery)
@@ -91,7 +92,7 @@ for place_1 in placeNodes_:
                         similarity = (qconnectvalue+1)/(place_1_dimension+place_2_dimension)
                     createQConnectGraphCypherQuery = 'MATCH (place1:Place), (place2:Place) ' \
                                                      'Where place1.name = "{}" AND place2.name = "{}" ' \
-                                                     'MERGE (place1)-[s:PUPQ]->(place2) ' \
+                                                     'MERGE (place1)-[s:PUP]->(place2) ' \
                                                      'SET s.qconnect={} ' \
                                                      'SET s.length = {} ' \
                                                      'SET s.similarity={} '.format(dict(place_1)["name"], dict(place_2)["name"], qconnectvalue, connectiveLength, similarity)
